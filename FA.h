@@ -27,6 +27,11 @@ public:
 		alphabet = vector<string>();
 		state = vector<State>();
 	}
+	
+	FA ConvertToDFA(){
+
+		return FA();
+	}
 };
 
 #endif
