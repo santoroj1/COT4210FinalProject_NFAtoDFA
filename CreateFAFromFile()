@@ -1,0 +1,108 @@
+// ADD THIS CODE TO MAIN.CPP BELOW " #include "FA.h" "!
+#include <fstream>
+#include <sstream>
+
+// Files are read in specific format as described in the project report.
+FA CreateFAFromFile(const string& FileName)
+{
+	ifstream file = ifstream(FileName);
+
+	// Variables to keep track of input
+	int readerIndex = 0;
+	int stateIndex = 0;
+	int stateCount = -1;
+	int transitionIndex = 0;
+	int transitionCount = -1;
+	int lengthOfAlphabet = 0;
+
+	// Input alphabet
+	vector<char> alphabet = vector<char>();
+	
+	// Input state names
+	vector<string> stateNames = vector<string>();
+
+	// Input state transition functions
+	vector<vector<char>> validTransitions = vector<vector<char>>();
+	vector<vector<int>> nextStateIndeces = vector<vector<int>>();
+
+	// Loop for reading the file
+	while (true)
+	{
+		if (readerIndex == 0)  // Get number of alphabet symbols
+		{
+			file >> lengthOfAlphabet;
+			alphabet.resize(lengthOfAlphabet);
+		}
+		else  // Read alphabet + do all other things necessary for setting up FA.
+		{
+			if (readerIndex - 1 < lengthOfAlphabet) // Finish reading alphabet.
+			{
+				file >> alphabet[readerIndex - 1];
+			}
+			else  // Get states
+			{
+				if (stateCount == -1)  // Get number of states from file.
+				{
+					file >> stateCount;
+
+					stateNames.resize(stateCount);
+					validTransitions.resize(stateCount);
+					nextStateIndeces.resize(stateCount);
+				}
+				else  // Read all states.
+				{
+					if (stateIndex < stateCount)  // Only read states when the current state index is less than the state count.
+					{
+						if (stateNames[stateIndex] == "")  // Assign name to state first.
+						{
+							file >> stateNames[stateIndex];
+						}
+						else  // Read in transition functions.
+						{
+							if (transitionCount == -1)  // Get transition function count for current state.
+							{
+								file >> transitionCount;
+
+								validTransitions[stateIndex].resize(transitionCount);
+								nextStateIndeces[stateIndex].resize(transitionCount);
+							}
+							else  // Read all transitions
+							{
+								if (transitionIndex < transitionCount)  // Read transitions when transition index is less than the count.
+								{
+									file >> validTransitions[stateIndex][transitionIndex];
+									file >> nextStateIndeces[stateIndex][transitionIndex];
+
+									transitionIndex++;
+								}
+								else  // We have finished reading all of this state's transitions.  Move on to next state and reset transition variables.
+								{
+									transitionIndex = 0;
+									transitionCount = -1;
+
+									stateIndex++;
+								}
+							}
+						}
+					}
+					else  // We have finished reading all states.
+					{
+						// Do nothing; we are done.
+					}
+				}
+			}
+		}
+
+		if (file.eof())
+		{
+			file.close();
+			break;
+		}
+		else
+			readerIndex++;
+	}
+
+	// Return statement should be modified so that data read from file is included in FA.  Use the statement "int blub = 0;" for debugging purposes.
+	int blub = 0;
+	return FA();
+}
