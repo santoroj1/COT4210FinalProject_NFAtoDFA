@@ -5,7 +5,7 @@
 // Files are read in specific format as described in the project report.
 FA CreateFAFromFile(const string& FileName)
 {
-	ifstream file = ifstream(FileName);
+	ifstream file(FileName, std::ifstream::in);
 
 	// Variables to keep track of input
 	int readerIndex = 0;
@@ -24,6 +24,11 @@ FA CreateFAFromFile(const string& FileName)
 	// Input state transition functions
 	vector<vector<char>> validTransitions = vector<vector<char>>();
 	vector<vector<int>> nextStateIndeces = vector<vector<int>>();
+
+	// 1st index is initial, 2nd is final
+	vector<vector<int>> isInitialFinal = vector<vector<int>>();
+
+	// validTransitions[0][0] --> nextStateIndeces[0][0] 
 
 	// Loop for reading the file
 	while (true)
@@ -48,6 +53,7 @@ FA CreateFAFromFile(const string& FileName)
 					stateNames.resize(stateCount);
 					validTransitions.resize(stateCount);
 					nextStateIndeces.resize(stateCount);
+					isInitialFinal.resize(stateCount);
 				}
 				else  // Read all states.
 				{
@@ -56,6 +62,11 @@ FA CreateFAFromFile(const string& FileName)
 						if (stateNames[stateIndex] == "")  // Assign name to state first.
 						{
 							file >> stateNames[stateIndex];
+
+							isInitialFinal[stateIndex].resize(2);
+
+							file >> isInitialFinal[stateIndex][0];
+							file >> isInitialFinal[stateIndex][1];
 						}
 						else  // Read in transition functions.
 						{
@@ -106,3 +117,6 @@ FA CreateFAFromFile(const string& FileName)
 	int blub = 0;
 	return FA();
 }
+
+// Calls the function.  Place in main.
+// FA nfa = CreateFAFromFile("NFA-1.txt");
