@@ -1,9 +1,10 @@
 #ifndef FA_H
 #define FA_H
 
-#include "State.h"
+#include <string>
+#include <vector>
+#include <iostream>
 #include <map>
-#include <fstream>
 
 using namespace std;
 
@@ -11,25 +12,57 @@ using namespace std;
 class FA
 {
 private:
-	vector<string> alphabet;
-	vector<State> state;
+	vector<char> alphabet;
+	vector<vector<string>> stateNames;
+	// vector<vector<int>> nextState;
+
+	vector<vector<string>> validTransition;
+
+	// [0] = initial; [1] = final
+	vector<vector<bool>> isInitialFinal;
 
 public:
+	// Default constructor
 	FA()
 	{
-		// Reads in a file and constructs NFA.
+		alphabet = vector<char>();
+	}
 
-		// Current state:
-		// state[i]
-		// Next states:
-		// state[state[i].GetTransitions()[j].nextState]
+	// Constructor with a purpose.
+	FA(vector<char> Alphabet, vector<string> StateNames, vector<vector<char>> ValidTransitions, vector<vector<int>> NextStateIndeces, vector<vector<int>> IsInitialFinal)
+	{
+		// Initialize alphabet.  Note that alphabet implicitly contains lambda ('_').
+		alphabet = Alphabet;
 
-		alphabet = vector<string>();
-		state = vector<State>();
+		stateNames = vector<vector<string>>(StateNames.size());
+		validTransition = vector<vector<string>>(StateNames.size());
+		isInitialFinal = vector<vector<bool>>(StateNames.size());
+		
+		for (int i = 0; i < stateNames.size(); i++)
+		{
+			stateNames[i] = vector<string>();
+			stateNames[i].push_back(StateNames[i]);
+
+			validTransition[i] = vector<string>(StateNames.size());
+			isInitialFinal[i] = vector<bool>(2);
+
+			// Is initial?
+			isInitialFinal[i][0] = (IsInitialFinal[i][0] == 0 ? false : true);
+			// Is final?
+			isInitialFinal[i][1] = (IsInitialFinal[i][1] == 0 ? false : true);
+
+			for (int j = 0; j < ValidTransitions[i].size(); j++)
+			{
+				validTransition[i][NextStateIndeces[i][j]] += ValidTransitions[i][j];
+			}
+		}
+
+		int blub = 0;
 	}
 	
-	FA ConvertToDFA(){
-
+	FA ConvertToDFA()
+	{
+		// return new FA that has been converted to DFA.
 		return FA();
 	}
 };
