@@ -116,14 +116,42 @@ private:
 		}
 	}
 
-	// Sorts indeces in a vector in ascending order to allow for quickly checking to see whether two vectors are equal.
-	void ReorderIndeces(vector<int>& OriginalIndexSet)
+	// Sorts indeces in a vector in descending order to allow for quickly checking to see whether two vectors are equal.
+	void ReorderIndeces(vector<int>& OriginalIndexSet, bool RemoveDuplicates)
 	{
+		// Remove duplicates.
+		if (RemoveDuplicates)
+		{
+			vector<int> allValues = vector<int>();
+
+			for (int i = 0; i < OriginalIndexSet.size(); i++)
+			{
+				bool valueExists = false;
+
+				for (int j = 0; j < allValues.size(); j++)
+				{
+					if (allValues[j] == OriginalIndexSet[i])
+					{
+						valueExists = true;
+						break;
+					}
+				}
+
+				if (valueExists)
+				{
+					OriginalIndexSet.erase(OriginalIndexSet.begin() + i);
+					i--;
+				}
+				else
+					allValues.push_back(OriginalIndexSet[i]);
+			}
+		}
+
 		for (int i = 0; i < OriginalIndexSet.size(); i++)  // Simple sort.
 		{
-			for (int j = 1; j < OriginalIndexSet.size(); j++)
+			for (int j = i + 1; j < OriginalIndexSet.size(); j++)
 			{
-				if (OriginalIndexSet[j] < OriginalIndexSet[i])
+				if (OriginalIndexSet[j] > OriginalIndexSet[i])
 				{
 					// Swap
 					int temp = OriginalIndexSet[j];
@@ -132,6 +160,8 @@ private:
 				}
 			}
 		}
+
+		int blub = 0;
 	}
 
 	// Gets string for all of the names in 'stateNames' without set notation.
@@ -321,20 +351,24 @@ public:
 		for (int i = 0; i < stateNames.size(); i++)
 		{
 			stateNames[i] = vector<string>(StateNames[i].size());
-			validTransition[i] = vector<string>(TransitionMatrix[i].size());
 			isInitialFinal[i] = vector<bool>(IsInitialFinal[i].size());
 
 			for (int j = 0; j < stateNames[i].size(); j++)
 				stateNames[i][j] = StateNames[i][j];
-
-			for (int j = 0; j < validTransition[i].size(); j++)
-				validTransition[i][j] = TransitionMatrix[i][j];
 
 			for (int j = 0; j < isInitialFinal[i].size(); j++)
 				isInitialFinal[i][j] = IsInitialFinal[i][j];
 
 			if (isInitialFinal[i][0])
 				startStateIndex = i;
+		}
+
+		for (int i = 0; i < validTransition.size(); i++)
+		{
+			validTransition[i] = vector<string>(TransitionMatrix[i].size());
+
+			for (int j = 0; j < validTransition[i].size(); j++)
+				validTransition[i][j] = TransitionMatrix[i][j];
 		}
 	}
 
@@ -516,12 +550,15 @@ public:
 
 		vector<vector<string>> dfaStateList = vector<vector<string>>();
 		vector<vector<string>> dfaTransitionMatrix = vector<vector<string>>();  // Note that each string in the DFA will contain exactly the characters in the alphabet or "".
-		vector<vector<bool>> isInitialFinal = vector<vector<bool>>();
+		vector<vector<bool>> isDFAInitialFinal = vector<vector<bool>>();
 		int dfaStartStateIndex = 0;  // This is true in every case.
 
 		// Enqueue first item to name queue.  Also, add the ability to have at least one item in the matrix.
 		stateIndexQ.push(vector<int>(1, nfaWithoutLambda.startStateIndex));
 		dfaTransitionMatrix = IncreaseMatrixSize(dfaTransitionMatrix);
+
+		// "Visit" item here.  This prevents addition of duplicate states.
+		visitedList.push_back(vector<int>(1, nfaWithoutLambda.startStateIndex));
 
 		// Traverse + expand nodes, adding new states to dfa.
 		while (stateIndexQ.size() > 0)
@@ -531,17 +568,29 @@ public:
 			stateIndexQ.pop();
 
 			// "Visit" item.  Add state to DFA.
-			visitedList.push_back(currentStateIndex);
+			// visitedList.push_back(currentStateIndex);
 			vector<string> curDFAState = vector<string>();
+			isDFAInitialFinal.push_back(vector<bool>(2));
 
-			for (int i = 0; i < currentStateIndex.size(); i++)  // For each state index, get all of the names.
+			bool isInitial = true;
+
+			for (int i = 0; i < currentStateIndex.size(); i++)  // For each state index, get all of the names.  Also, determine whether state is initial or final.
 			{
 				for (int j = 0; j < nfaWithoutLambda.stateNames[currentStateIndex[i]].size(); j++)
 					curDFAState.push_back(nfaWithoutLambda.stateNames[currentStateIndex[i]][j]);
+
+				// Check for if state is final.
+				if (nfaWithoutLambda.isInitialFinal[currentStateIndex[i]][1])
+					isDFAInitialFinal[isDFAInitialFinal.size() - 1][1] = true;
+
+				// Check for if state is initial.
+				if (!nfaWithoutLambda.isInitialFinal[currentStateIndex[i]][0])
+					isInitial = false;
 			}
 
+			isDFAInitialFinal[isDFAInitialFinal.size() - 1][0] = isInitial;
+
 			dfaStateList.push_back(curDFAState);
-			isInitialFinal.push_back(vector<bool>(2));
 
 			// If we are debugging, print the DFA.
 			if (ShowSteps)
@@ -560,15 +609,17 @@ public:
 
 				for (int j = 0; j < currentStateIndex.size(); j++)
 				{
-					nextStateListCurState = GetNextStateIndeces(currentStateIndex[j], alphabet[i]);
+					nextStateListCurState = nfaWithoutLambda.GetNextStateIndeces(currentStateIndex[j], alphabet[i]);
+
+					// Push all elements to back of original vector.
+					for (int k = 0; k < nextStateListCurState.size(); k++)
+						nextStateList[i].push_back(nextStateListCurState[k]);
 				}
 
-				// Push all elements to back of original vector.
-				for (int j = 0; j < nextStateListCurState.size(); j++)
-					nextStateList[i].push_back(nextStateListCurState[j]);
+				// Remove duplicate elements from vector.
 
 				// Sort vector to allow for quick comparisons.
-				ReorderIndeces(nextStateList[i]);
+				ReorderIndeces(nextStateList[i], true);
 			}
 
 			// Now try to add new transition.
@@ -582,14 +633,19 @@ public:
 				{
 					bool doesStateExist = true;
 					
-					for (int k = 0; k < visitedList[j].size() && k < nextStateList[i].size(); k++)
+					if (visitedList[j].size() == nextStateList[i].size())  // If the lists are not the same size, then one must not exist in the visited list section.
 					{
-						if (visitedList[j][k] != nextStateList[i][k])
+						for (int k = 0; k < visitedList[j].size() && k < nextStateList[i].size(); k++)
 						{
-							doesStateExist = false;
-							break;
+							if (visitedList[j][k] != nextStateList[i][k])
+							{
+								doesStateExist = false;
+								break;
+							}
 						}
 					}
+					else
+						doesStateExist = false;
 
 					if (doesStateExist)
 					{
@@ -599,10 +655,13 @@ public:
 					}
 				}
 
+				if (nextStateIndexTransition == visitedList.size())
+					dfaTransitionMatrix = IncreaseMatrixSize(dfaTransitionMatrix);
+
 				// If the next state does not exist in the visited list, enqueue the desired list element.  Also, increase the size of the transition matrix.
 				if (!isStateVisited)
 				{
-					dfaTransitionMatrix = IncreaseMatrixSize(dfaTransitionMatrix);
+					visitedList.push_back(nextStateList[i]);
 					stateIndexQ.push(nextStateList[i]);
 				}
 
@@ -611,7 +670,14 @@ public:
 			}
 		}
 
-		FA dfa = FA(alphabet, dfaStateList, dfaTransitionMatrix, isInitialFinal);
+		FA dfa = FA(alphabet, dfaStateList, dfaTransitionMatrix, isDFAInitialFinal);
+
+		if (ShowSteps)
+		{
+			cout << "Converted DFA:  " << endl;
+			dfa.PrintFA(29);
+		}
+
 		return dfa;
 	}
 	// End Algorithm ===============================================================================================================================================
@@ -1232,7 +1298,7 @@ public:
 
 		cout << endl;
 
-		for (int i = 0; i < validTransition.size(); i++)
+		for (int i = 0; i < validTransition.size() && i < stateNames.size(); i++)
 		{
 			string curInput = (isDFA ? GetStateNameDFA(i) : GetStateNameNFA(i)) + " - " + (isInitialFinal[i][0] ? "I" : "") + (isInitialFinal[i][1] ? "F" : "");
 
