@@ -123,6 +123,7 @@ int main()
 		<< "by Mark Tushemereirwe, John Santoro, and Gregory Wood" << endl << endl;
 
 	FA nfa(CreateFAFromFile("NFA-2.txt"));
+	FA dfa = FA();
 
 	// Maximum column width...
 	int columnWidth = 29;
@@ -156,10 +157,13 @@ int main()
 		string startState = "";
 		string endState = "";
 		int inputState = 0;
+		int startStateIndex = 0;
+		int endStateIndex = 0;
 		vector<int> statesToUnify = vector<int>();
 		
 		cout << "Type command here.  'q' = quit; 'p' = print NFA; 'c' = convert to DFA;" << endl
-			<< "'t' = test input; 'a' = add state; 'z' = add transition; 'u' = add unified state" << endl;
+			<< "'t' = test input; 'a' = add state; 'z' = add transition; 'u' = add unified state" << endl
+			<< "'y' = erase transition; 'd' = delete state; 'e' = E-Closure" << endl;
 		char ui = cin.get();
 
 		// Clear input.
@@ -167,6 +171,50 @@ int main()
 		
 		switch (ui)
 		{
+		case 'e':  // Perform epsilon-closure on the state machine.  This is a pre-step for NFA to DFA conversion.
+			cout << "Enter index of state to remove epsilon-transitions from." << endl;
+			cin >> inputState;
+
+			// Clear input.
+			cin.ignore();
+			inputString = nfa.StateNamePublic(inputState);
+			cout << "Epsilon-Closure of state \"" << inputString << "\" was " << (nfa.RemoveLambdaTransitions(inputState) ? "successful." : "not successful.") << endl;
+			inputString = "";
+			break;
+		case 'd':  // Delete a state.
+			cout << "Enter index of state to delete." << endl;
+			cin >> inputState;
+
+			// Clear input.
+			cin.ignore();
+
+			inputString = nfa.StateNamePublic(inputState);
+			cout << "Deletion of state \"" << inputString << "\" was " << (nfa.RemoveState(inputState) ? "successful." : "not successful.") << endl;
+			inputString = "";
+			break;
+		case 'y':  // Erase a transition.
+			cout << "Enter starting state index." << endl;
+			cin >> startStateIndex;
+
+			// Clear input.
+			cin.ignore();
+
+			cout << "Enter ending state index." << endl;
+			cin >> endStateIndex;
+
+			// Clear input.
+			cin.ignore();
+
+			cout << "Enter transition character to remove." << endl;
+			ui = cin.get();
+
+			// Clear input.
+			cin.ignore();
+
+			cout << "Transition \"" << nfa.StateNamePublic(startStateIndex) << "\" --\'" << ui << "\'--> " << nfa.StateNamePublic(endStateIndex)
+				<< " was " << (nfa.RemoveTransition(startStateIndex, endStateIndex, ui) ? "successfully " : "unsuccessfully ") << "removed." << endl;
+			ui = '\0';
+			break;
 		case 'u':  // Unify two states.  Note that a new state is produced.
 			inputState = 0;
 			statesToUnify.clear();
@@ -183,7 +231,7 @@ int main()
 					statesToUnify.push_back(inputState);
 			}
 
-			cout << "Addition of unified state " << (nfa.AddUnionState(statesToUnify) ? "successful." : "not successful.") << endl;
+			cout << "Addition of unified state " << (nfa.ReplaceStatesWithUnion(statesToUnify) ? "successful." : "not successful.") << endl;
 			break;
 		case 'z':  // Add a transition.
 			cout << "Enter start state:  " << endl;
@@ -239,7 +287,7 @@ int main()
 				else
 					cout << "Invalid input.  Please enter 'y' or 'n'." << endl;
 			}
-			cout << "Addition of state \"" << inputString << "\" was " << (nfa.AddState(isInitial, isFinal, inputString) ? "successful." : "not successful.") << endl;
+			cout << "Addition of state \"" << inputString << "\" was " << (nfa.AddState(isInitial, isFinal, "|" + inputString + "|", false) ? "successful." : "not successful.") << endl;
 			break;
 		case 't':  // Test an input
 			cout << "Enter input to test.  Enter nothing for lambda string:  " << endl;
@@ -269,6 +317,7 @@ int main()
 			break;
 		case 'c':
 			cout << "Converting NFA to DFA.  Show steps?  y/n:  " << endl;
+			ui = '\0';
 			while (ui != 'y' && ui != 'n')
 			{
 				ui = cin.get();
@@ -287,6 +336,7 @@ int main()
 				else
 					cout << "Invalid input.  Please enter 'y' or 'n'." << endl;
 			}
+			dfa = nfa.ConvertToDFA(ui == 'y');
 			break;
 		case 'p':
 			cout << "Printing FA..." << endl;
