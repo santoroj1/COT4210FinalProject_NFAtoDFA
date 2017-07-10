@@ -672,6 +672,9 @@ public:
 
 		FA dfa = FA(alphabet, dfaStateList, dfaTransitionMatrix, isDFAInitialFinal);
 
+		// Add transitions to fail states
+		// [If needed].
+
 		if (ShowSteps)
 		{
 			cout << "Converted DFA:  " << endl;
@@ -684,64 +687,101 @@ public:
 	// =============================================================================================================================================================
 
 	// Mutators ====================================================================================================================================================
-	// Remove all lambda-transitions from this state by traversing all lambda-transitions and combining the associated states.  Returns whether successful.
+	// Remove all lambda-transitions from this state by traversing all lambda-transitions and copying transitions from the previous states.  Returns whether successful.
 	bool RemoveLambdaTransitions(int& StateIndex)
 	{
 		if (StateIndex < 0 || StateIndex >= stateNames.size())
 			return false;  // The state index is outside of the valid range.
 
+		// Get previous states.
+		vector<int> prevStateIndeces = GetPrevStateIndeces(StateIndex);
+
+		// Get next states with lambda-transitions.
+		vector<int> nextStateIndeces = GetNextStateIndeces(StateIndex, '_');
+
+		// Copy all non-lambda transitions from previous states to all next states
+		for (int i = 0; i < prevStateIndeces.size(); i++)
+		{
+			for (int j = 0; j < nextStateIndeces.size(); j++)
+			{
+				for (int k = 0; k < validTransition[prevStateIndeces[i]][StateIndex].size(); k++)
+					AddTransition(prevStateIndeces[i], nextStateIndeces[j], validTransition[prevStateIndeces[i]][StateIndex][k]);
+			}
+		}
+
+		// Remove lambda-transitions and copy all outgoing transitions from next states to current state.
+		for (int i = 0; i < nextStateIndeces.size(); i++)
+		{
+			RemoveTransition(StateIndex, nextStateIndeces[i], '_');
+
+			vector<int> outgoingNextStateTransitions = GetNextStateIndeces(nextStateIndeces[i]);
+
+			// Add next-next transitions to current state.
+			for (int j = 0; j < outgoingNextStateTransitions.size(); j++)
+			{
+				for (int k = 0; k < validTransition[nextStateIndeces[i]][outgoingNextStateTransitions[j]].size(); k++)
+				{
+					AddTransition(StateIndex, outgoingNextStateTransitions[j], validTransition[nextStateIndeces[i]][outgoingNextStateTransitions[j]][k]);
+				}
+			}
+		}
+
+		// Decrement StateIndex if there are next states with lambda so that the algorithm can repeat until there are no lambdas.
+		if (nextStateIndeces.size() > 0)
+			StateIndex--;
+
 		// Get a vector<int> containing all of the indeces of the states to combine.
-		vector<int> statesToCombine = vector<int>();
+		//vector<int> statesToCombine = vector<int>();
 
-		// BFS until no more lambda-transitions are found.  Use table to make searching visited list run in linear time.
-		queue<int> stateIndexQ = queue<int>();
-		vector<bool> visitedList = vector<bool>(stateNames.size());
+		//// BFS until no more lambda-transitions are found.  Use table to make searching visited list run in linear time.
+		//queue<int> stateIndexQ = queue<int>();
+		//vector<bool> visitedList = vector<bool>(stateNames.size());
 
-		stateIndexQ.push(StateIndex);
+		//stateIndexQ.push(StateIndex);
 
-		while (stateIndexQ.size() > 0)
-		{
-			int curStateIndex = stateIndexQ.front();
-			stateIndexQ.pop();
+		//while (stateIndexQ.size() > 0)
+		//{
+		//	int curStateIndex = stateIndexQ.front();
+		//	stateIndexQ.pop();
 
-			visitedList[curStateIndex] = true;
-			statesToCombine.push_back(curStateIndex);
-			
-			// Get lambda-transitions only.
-			vector<int> nextStateIndeces = GetNextStateIndeces(curStateIndex, '_');
+		//	visitedList[curStateIndex] = true;
+		//	statesToCombine.push_back(curStateIndex);
+		//	
+		//	// Get lambda-transitions only.
+		//	vector<int> nextStateIndeces = GetNextStateIndeces(curStateIndex, '_');
 
-			for (int i = 0; i < nextStateIndeces.size(); i++)
-			{
-				if (!visitedList[nextStateIndeces[i]])  // If the desired next state is not in the visited list, enqueue this item.
-					stateIndexQ.push(nextStateIndeces[i]);
-			}
-		}
+		//	for (int i = 0; i < nextStateIndeces.size(); i++)
+		//	{
+		//		if (!visitedList[nextStateIndeces[i]])  // If the desired next state is not in the visited list, enqueue this item.
+		//			stateIndexQ.push(nextStateIndeces[i]);
+		//	}
+		//}
 
-		if (statesToCombine.size() <= 1)
-			return false;  // The only state that was considered was the starting state.
+		//if (statesToCombine.size() <= 1)
+		//	return false;  // The only state that was considered was the starting state.
 
-		// Remove all lambda-transitions.
-		for (int i = 0; i < statesToCombine.size() - 1; i++)
-		{
-			RemoveTransition(statesToCombine[i], statesToCombine[i + 1], '_');
+		//// Remove all lambda-transitions.
+		//for (int i = 0; i < statesToCombine.size() - 1; i++)
+		//{
+		//	RemoveTransition(statesToCombine[i], statesToCombine[i + 1], '_');
 
-			// Update value of current state index.
-			if (statesToCombine[i] <= StateIndex)
-				StateIndex--;
-		}
+		//	// Update value of current state index.
+		//	if (statesToCombine[i] <= StateIndex)
+		//		StateIndex--;
+		//}
 
-		// Now try to combine the states.
-		ReplaceStatesWithUnion(statesToCombine);
+		//// Now try to combine the states.
+		//ReplaceStatesWithUnion(statesToCombine);
 
-		// Find the initial state and set the initial state index.
-		for (int i = 0; i < isInitialFinal.size(); i++)
-		{
-			if (isInitialFinal[i][0])
-			{
-				startStateIndex = i;
-				break;
-			}
-		}
+		//// Find the initial state and set the initial state index.
+		//for (int i = 0; i < isInitialFinal.size(); i++)
+		//{
+		//	if (isInitialFinal[i][0])
+		//	{
+		//		startStateIndex = i;
+		//		break;
+		//	}
+		//}
 
 		return true;
 	}
@@ -1141,7 +1181,8 @@ public:
 
 			if (Debug)
 			{
-				std::cout << "State \"" << stateNames[currentStateIndex][0] << "\":  \'" << currentChar << "\' (\"" << currentInputString << "\") --> ";
+				std::cout << "State \"" << (isDFA ? GetStateNameDFA(currentStateIndex) : GetStateNameNFA(currentStateIndex)) 
+					<< "\":  \'" << currentChar << "\' (\"" << currentInputString << "\") --> ";
 			}
 
 			if (currentChar != '_')  // The string must not be empty; otherwise, we will not enqueue this item.
@@ -1157,7 +1198,8 @@ public:
 				{
 					if (Debug)
 					{
-						std::cout << "\"" << stateNames[nextStateIndecesLambda[i]][0] << "\"" << (sIndex < sTotal - 1 ? ", " : "");
+						std::cout << "\"" << (isDFA ? GetStateNameDFA(nextStateIndecesLambda[i]) : GetStateNameNFA(nextStateIndecesLambda[i])) 
+							<< "\"" << (sIndex < sTotal - 1 ? ", " : "");
 					}
 
 					inputQ.push(currentInputString);
@@ -1173,7 +1215,8 @@ public:
 				{
 					if (Debug)
 					{
-						std::cout << "\"" << stateNames[nextStateIndeces[i]][0] << "\"" << (sIndex < sTotal - 1 ? ", " : "");
+						std::cout << "\"" << (isDFA ? GetStateNameDFA(nextStateIndeces[i]) : GetStateNameNFA(nextStateIndeces[i]))
+							<< "\"" << (sIndex < sTotal - 1 ? ", " : "");
 					}
 
 					inputQ.push(currentInputString);
