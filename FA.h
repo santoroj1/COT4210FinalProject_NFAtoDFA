@@ -596,7 +596,7 @@ public:
 			if (ShowSteps)
 			{
 				cout << "Current FA:" << endl;
-				FA tempFA = FA(alphabet, dfaStateList, dfaTransitionMatrix, isInitialFinal);
+				FA tempFA = FA(alphabet, dfaStateList, dfaTransitionMatrix, isDFAInitialFinal);
 				tempFA.PrintFADebug(alphabet.size() + 2);
 			}
 
@@ -620,6 +620,11 @@ public:
 
 				// Sort vector to allow for quick comparisons.
 				ReorderIndeces(nextStateList[i], true);
+			}
+
+			if (dfaStateList.size() == 3)
+			{
+				int vomit = 0;
 			}
 
 			// Now try to add new transition.
