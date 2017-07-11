@@ -120,7 +120,7 @@ FA CreateFAFromFile(const string& FileName)
 int main()
 {
 	cout << "COT4210 Final Project - NFA to DFA Converter" << endl 
-		<< "by Mark Tushemereirwe, John Santoro, and Gregory Wood" << endl << endl;
+		<< "by Mark Tushemereirwe, Moshi Xu, John Santoro, and Gregory Wood" << endl << endl;
 
 	FA nfa(CreateFAFromFile("NFA-2.txt"));
 	FA dfa = FA();
